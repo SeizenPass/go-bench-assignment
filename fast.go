@@ -8,7 +8,6 @@ import (
 	"strings"
 )
 
-// вам надо написать более быструю оптимальную этой функции
 func FastSearch(out io.Writer) {
 	fileContents, err := ioutil.ReadFile(filePath)
 	if err != nil {
@@ -17,9 +16,9 @@ func FastSearch(out io.Writer) {
 
 	// Amiran: превратил слайс в мапу, хотя перформанс мог измениться в худшую сторону на основе бенчмарков
 	seenBrowsers := make(map[string]interface{})
-	uniqueBrowsers := 0
-
+	// Amiran: удалил лишнюю переменную
 	lines := strings.Split(string(fileContents), "\n")
+	// Amiran: храню только одну структуру, которую перезаписываю через easyjson
 	user := &user2.User{}
 	fmt.Fprintln(out, "found users:")
 	// Amiran: совместил все в один цикл, для большей скорости
@@ -48,7 +47,6 @@ func FastSearch(out io.Writer) {
 					// log.Printf("SLOW New browser: %s, first seen: %s", browser, user["name"])
 					var s struct{}
 					seenBrowsers[browser] = s
-					uniqueBrowsers++
 				}
 			}
 			// Amiran: Поменял regexp.MatchString на strings.Contains, так как мы особо тяжелых регулярок не делаем
@@ -62,7 +60,6 @@ func FastSearch(out io.Writer) {
 					// log.Printf("SLOW New browser: %s, first seen: %s", browser, user["name"])
 					var s struct{}
 					seenBrowsers[browser] = s
-					uniqueBrowsers++
 				}
 			}
 		}
