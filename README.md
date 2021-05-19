@@ -5,7 +5,7 @@
 BenchmarkSlow-8                2         644900900 ns/op        19767360 B/op     189814 allocs/op
 BenchmarkFast-8               68          19047566 ns/op         2247012 B/op       7328 allocs/op
 ```  
-В Makefile можете найти все нужны команды:
+В Makefile можете найти все нужные команды:
 ```shell script
 gen - для бенчмарка и получения результатов
 mem - для профилирования по памяти
