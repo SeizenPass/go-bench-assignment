@@ -1,95 +1,67 @@
 package main
 
-import(
-	"encoding/json"
+import (
 	"fmt"
+	user2 "hw3_bench/user"
 	"io"
 	"io/ioutil"
-	"os"
-	"regexp"
 	"strings"
 )
 
 // вам надо написать более быструю оптимальную этой функции
 func FastSearch(out io.Writer) {
-	file, err := os.Open(filePath)
+	fileContents, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		panic(err)
 	}
 
-	fileContents, err := ioutil.ReadAll(file)
-	if err != nil {
-		panic(err)
-	}
-
-	r := regexp.MustCompile("@")
-	seenBrowsers := []string{}
+	// Amiran: превратил слайс в мапу, хотя перформанс мог измениться в худшую сторону на основе бенчмарков
+	seenBrowsers := make(map[string]interface{})
 	uniqueBrowsers := 0
-	foundUsers := ""
 
 	lines := strings.Split(string(fileContents), "\n")
-
-	users := make([]map[string]interface{}, 0)
-	for _, line := range lines {
-		user := make(map[string]interface{})
+	user := &user2.User{}
+	fmt.Fprintln(out, "found users:")
+	// Amiran: совместил все в один цикл, для большей скорости
+	for i, line := range lines {
 		// fmt.Printf("%v %v\n", err, line)
-		err := json.Unmarshal([]byte(line), &user)
+		// Amiran: использую easyjson
+		err := user.UnmarshalJSON([]byte(line))
 		if err != nil {
 			panic(err)
 		}
-		users = append(users, user)
-	}
-
-	for i, user := range users {
-
 		isAndroid := false
 		isMSIE := false
 
-		browsers, ok := user["browsers"].([]interface{})
-		if !ok {
-			// log.Println("cant cast browsers")
-			continue
-		}
-
+		browsers := user.Browsers
+		// Amiran: Вместо двух циклов сделал один, хоть это и не сильно влияет
 		for _, browserRaw := range browsers {
-			browser, ok := browserRaw.(string)
-			if !ok {
-				// log.Println("cant cast browser to string")
-				continue
-			}
-			if ok, err := regexp.MatchString("Android", browser); ok && err == nil {
+			browser := browserRaw
+			// Amiran: Поменял regexp.MatchString на strings.Contains, так как мы особо тяжелых регулярок не делаем
+			if strings.Contains(browser, "Android") {
 				isAndroid = true
 				notSeenBefore := true
-				for _, item := range seenBrowsers {
-					if item == browser {
-						notSeenBefore = false
-					}
+				if seenBrowsers[browser] != nil {
+					notSeenBefore = false
 				}
 				if notSeenBefore {
 					// log.Printf("SLOW New browser: %s, first seen: %s", browser, user["name"])
-					seenBrowsers = append(seenBrowsers, browser)
+					var s struct{}
+					seenBrowsers[browser] = s
 					uniqueBrowsers++
 				}
 			}
-		}
-
-		for _, browserRaw := range browsers {
-			browser, ok := browserRaw.(string)
-			if !ok {
-				// log.Println("cant cast browser to string")
-				continue
-			}
-			if ok, err := regexp.MatchString("MSIE", browser); ok && err == nil {
+			// Amiran: Поменял regexp.MatchString на strings.Contains, так как мы особо тяжелых регулярок не делаем
+			if strings.Contains(browser, "MSIE") {
 				isMSIE = true
 				notSeenBefore := true
-				for _, item := range seenBrowsers {
-					if item == browser {
-						notSeenBefore = false
-					}
+				if seenBrowsers[browser] != nil {
+					notSeenBefore = false
 				}
 				if notSeenBefore {
 					// log.Printf("SLOW New browser: %s, first seen: %s", browser, user["name"])
-					seenBrowsers = append(seenBrowsers, browser)
+					var s struct{}
+					seenBrowsers[browser] = s
 					uniqueBrowsers++
 				}
 			}
@@ -100,10 +72,9 @@ func FastSearch(out io.Writer) {
 		}
 
 		// log.Println("Android and MSIE user:", user["name"], user["email"])
-		email := r.ReplaceAllString(user["email"].(string), " [at] ")
-		foundUsers += fmt.Sprintf("[%d] %s <%s>\n", i, user["name"], email)
+		email := strings.Replace(user.Email, "@", " [at] ", 1)
+		fmt.Fprintf(out, "[%d] %s <%s>\n", i, user.Name, email)
 	}
-
-	fmt.Fprintln(out, "found users:\n"+foundUsers)
+	fmt.Fprintf(out, "\n")
 	fmt.Fprintln(out, "Total unique browsers", len(seenBrowsers))
 }
